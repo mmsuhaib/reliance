@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountType {
+  CASH
+  BANK
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+model BankAccount {
+  id             String      @id @default(cuid())
+  name           String      @db.VarChar(191)
+  accountNumber  String?     @db.VarChar(191)
+  bankName       String?     @db.VarChar(191)
+  branch         String?     @db.VarChar(191)
+  type           AccountType @default(BANK)
+  openingBalance Decimal     @default(0.00) @db.Decimal(15, 2)
+  currentBalance Decimal     @default(0.00) @db.Decimal(15, 2)
+  color          String?     @db.VarChar(50)
+  isDefault      Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  outgoingTransactions Transaction[] @relation("FromAccount")
+  incomingTransactions Transaction[] @relation("ToAccount")
+
+  @@map("bank_accounts")
+}
+
+model ExpenseCategory {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(191)
+  color       String   @default("#ef4444") @db.VarChar(50)
+  icon        String?  @db.VarChar(50)
+  isSystem    Boolean  @default(false)
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("expense_categories")
+}
+
+model IncomeCategory {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(191)
+  color     String   @default("#10b981") @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("income_categories")
+}
+
+model Transaction {
+  id              String          @id @default(cuid())
+  date            DateTime        @default(now())
+  type            TransactionType
+  amount          Decimal         @db.Decimal(15, 2)
+  accountId       String          @db.VarChar(191)
+  toAccountId     String?         @db.VarChar(191)
+  categoryId      String?         @db.VarChar(191)
+  categoryName    String?         @db.VarChar(191)
+  description     String          @db.VarChar(255)
+  notes           String?         @db.Text
+  referenceNumber String?         @db.VarChar(191)
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  account         BankAccount     @relation("FromAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  toAccount       BankAccount?    @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
+
+  @@index([accountId])
+  @@index([toAccountId])
+  @@index([categoryId])
+  @@index([date])
+  @@index([type])
+  @@map("transactions")
+}
